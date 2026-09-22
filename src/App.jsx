@@ -3,11 +3,14 @@ import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import AppShell from './components/AppShell.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 
-import Landing   from './pages/Landing.jsx';
-import Login     from './pages/Login.jsx';
-import Register  from './pages/Register.jsx';
-import Dashboard from './pages/Dashboard.jsx';
-import NotFound  from './pages/NotFound.jsx';
+import Landing      from './pages/Landing.jsx';
+import Login        from './pages/Login.jsx';
+import Register     from './pages/Register.jsx';
+import Dashboard    from './pages/Dashboard.jsx';
+import CreateCircle from './pages/CreateCircle.jsx';
+import CircleDetail from './pages/CircleDetail.jsx';
+import JoinCircle   from './pages/JoinCircle.jsx';
+import NotFound     from './pages/NotFound.jsx';
 
 function RedirectIfLoggedIn({ children }) {
   const { user, loading } = useAuth();
@@ -25,10 +28,15 @@ function AppRoutes() {
         <Route path="/login"    element={<RedirectIfLoggedIn><Login /></RedirectIfLoggedIn>} />
         <Route path="/register" element={<RedirectIfLoggedIn><Register /></RedirectIfLoggedIn>} />
 
-        {/* Protected */}
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        {/* Public join preview — JoinCircle handles its own auth check internally */}
+        <Route path="/join/:code" element={<JoinCircle />} />
 
-        {/* Day 2+: circles, trust, profile routes will be added here */}
+        {/* Protected */}
+        <Route path="/dashboard"      element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/circles/new"    element={<ProtectedRoute><CreateCircle /></ProtectedRoute>} />
+        <Route path="/circles/:id"    element={<ProtectedRoute><CircleDetail /></ProtectedRoute>} />
+
+        {/* Day 3+: trust profile, payments routes */}
 
         {/* Catch-all */}
         <Route path="*" element={<NotFound />} />
