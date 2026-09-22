@@ -10,7 +10,7 @@ function FieldError({ message }) {
   return <p className="field-error" role="alert">{message}</p>;
 }
 
-// Returns today's date as YYYY-MM-DD in the user's local timezone
+// Returns today's date as YYYY-MM-DD in the user's local timezone.
 function todayLocal() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -27,9 +27,9 @@ export default function CreateCircle() {
     startDate: todayLocal(),
     graceDays: 2,
   });
-  const [errors, setErrors]       = useState({});
+  const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState('');
-  const [submitting, setSubmitting]   = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   // Success state after create
   const [created, setCreated] = useState(null); // { circle, inviteUrl }
@@ -93,7 +93,7 @@ export default function CreateCircle() {
     const { circle, inviteUrl } = created;
 
     async function copyLink() {
-      try { await navigator.clipboard.writeText(inviteUrl); } catch {}
+      try { await navigator.clipboard.writeText(inviteUrl); } catch { }
     }
 
     const whatsappMsg = encodeURIComponent(
