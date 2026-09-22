@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { formatNaira } from '../utils/money.js';
 import { formatDate, formatDateTime, relativeDays } from '../utils/dates.js';
 import { CircleDetailSkeleton, Skeleton } from '../components/LoadingSkeleton.jsx';
+import StatusChip from '../components/StatusChip.jsx';
 
 const FREQ_LABEL = { weekly: 'week', biweekly: '2 weeks', monthly: 'month' };
 const STATUS_CHIP = {
@@ -13,19 +14,37 @@ const STATUS_CHIP = {
   active:    'chip chip-green',
   completed: 'chip bg-slate-100 text-slate-500',
 };
-const OBLIGATION_CHIP = {
-  pending:      'chip chip-amber',
-  paid_on_time: 'chip chip-green',
-  paid_late:    'chip bg-blue-100 text-blue-700',
-  missed:       'chip chip-red',
-};
+
 const LEDGER_TYPE_META = {
   contribution: { label: 'Contribution', icon: '↑', color: 'text-primary-600 bg-primary-50' },
-  payout:       { label: 'Payout',       icon: '→', color: 'text-purple-600 bg-purple-50' },
-  missed:       { label: 'Missed',       icon: '✕', color: 'text-danger-600 bg-danger-50' },
+  payout:       { label: 'Payout (Sandbox)', icon: '→', color: 'text-purple-600 bg-purple-50' },
+  missed:       { label: 'Missed',           icon: '✕', color: 'text-red-600 bg-red-50' },
 };
 
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
+
+// ── Trust tier colours ────────────────────────────────────────────────────────
+
+const TIER_CHIP = {
+  excellent: 'bg-emerald-100 text-emerald-700',
+  good:      'bg-primary-100 text-primary-700',
+  fair:      'bg-amber-100 text-amber-700',
+  poor:      'bg-red-100 text-red-700',
+  building:  'bg-slate-100 text-slate-500',
+};
+
+// ── Spinner ───────────────────────────────────────────────────────────────────
+
+function Spinner({ size = 4 }) {
+  return (
+    <span
+      className={`w-${size} h-${size} border-2 border-white/40 border-t-white rounded-full animate-spin`}
+    />
+  );
+}
+
 // ── Confirmation modal ────────────────────────────────────────────────────────
+
 function StartModal({ memberCount, onConfirm, onCancel, loading }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4">
@@ -38,7 +57,41 @@ function StartModal({ memberCount, onConfirm, onCancel, loading }) {
         <div className="flex gap-3 pt-1">
           <button onClick={onCancel} disabled={loading} className="btn-ghost flex-1">Cancel</button>
           <button id="confirm-start-circle" onClick={onConfirm} disabled={loading} className="btn-primary flex-1">
-            {loading ? <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Starting…</span> : 'Start circle'}
+            {loading ? <span className="flex items-center gap-2"><Spinner />Starting…</span> : 'Start circle'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Demo confirm modal ────────────────────────────────────────────────────────
+
+function DemoModal({ action, onConfirm, onCancel, loading }) {
+  const isClose = action === 'close-cycle';
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+        <h2 className="font-display text-lg font-bold text-slate-900">
+          {isClose ? '⏩ Simulate cycle close?' : '⏰ Pass the due date?'}
+        </h2>
+        <p className="text-sm text-slate-600">
+          {isClose
+            ? 'This will move the demo clock past the close window, running the cycle engine. All pending obligations become missed and the pot is distributed.'
+            : 'This will move the demo clock 1 hour after the due date. Overdue reminders will fire.'}
+        </p>
+        <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700">
+          🛡 Sandbox only — no real money moves.
+        </div>
+        <div className="flex gap-3 pt-1">
+          <button onClick={onCancel} disabled={loading} className="btn-ghost flex-1">Cancel</button>
+          <button
+            id={`demo-confirm-${action}`}
+            onClick={onConfirm}
+            disabled={loading}
+            className="btn-primary flex-1 bg-amber-600 hover:bg-amber-700 active:bg-amber-800"
+          >
+            {loading ? <span className="flex items-center gap-2"><Spinner />Running…</span> : 'Confirm'}
           </button>
         </div>
       </div>
@@ -47,26 +100,21 @@ function StartModal({ memberCount, onConfirm, onCancel, loading }) {
 }
 
 // ── Pay button component ──────────────────────────────────────────────────────
-function PayButton({ circleId, obligation, cycle, circle }) {
+
+function PayButton({ circleId, obligation, cycle }) {
   const [paying, setPaying] = useState(false);
   const [error, setError]   = useState('');
 
   if (!obligation || !cycle) return null;
 
   const now = new Date();
-  const dueDate    = new Date(cycle.dueDate);
-  const closesAt   = new Date(cycle.closesAt);
-  const isOverdue  = now > dueDate && now <= closesAt;
-  const isClosed   = now > closesAt;
+  const dueDate   = new Date(cycle.dueDate);
+  const closesAt  = new Date(cycle.closesAt);
+  const isOverdue = now > dueDate && now <= closesAt;
+  const isClosed  = now > closesAt;
 
   if (obligation.status !== 'pending') {
-    return (
-      <div className={`${OBLIGATION_CHIP[obligation.status] ?? 'chip bg-slate-100 text-slate-500'} !text-sm !py-1.5 !px-3 w-full justify-center`}>
-        {obligation.status === 'paid_on_time' && '✓ Paid on time'}
-        {obligation.status === 'paid_late'    && '✓ Paid (late)'}
-        {obligation.status === 'missed'       && '✗ Missed'}
-      </div>
-    );
+    return <StatusChip status={obligation.status} className="!text-sm !py-1.5 !px-3 w-full justify-center" />;
   }
 
   if (isClosed) {
@@ -82,7 +130,6 @@ function PayButton({ circleId, obligation, cycle, circle }) {
     setPaying(true);
     try {
       const { authorizationUrl } = await paymentsApi.contribute(circleId);
-      // Redirect to Paystack checkout
       window.location.href = authorizationUrl;
     } catch (err) {
       setError(err?.response?.data?.error?.message ?? 'Could not initiate payment. Please try again.');
@@ -92,9 +139,7 @@ function PayButton({ circleId, obligation, cycle, circle }) {
 
   return (
     <div className="space-y-1.5">
-      {error && (
-        <p role="alert" className="text-xs text-danger-600">{error}</p>
-      )}
+      {error && <p role="alert" className="text-xs text-red-600">{error}</p>}
       <button
         id="pay-obligation-btn"
         onClick={handlePay}
@@ -102,10 +147,7 @@ function PayButton({ circleId, obligation, cycle, circle }) {
         className={`w-full btn-primary text-sm ${isOverdue ? 'bg-amber-600 hover:bg-amber-700 active:bg-amber-800' : ''}`}
       >
         {paying ? (
-          <span className="flex items-center gap-2">
-            <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-            Opening checkout…
-          </span>
+          <span className="flex items-center gap-2"><Spinner />Opening checkout…</span>
         ) : isOverdue
           ? `Pay now (late) — ${formatNaira(obligation.amountKobo)}`
           : `Pay ${formatNaira(obligation.amountKobo)}`}
@@ -115,9 +157,134 @@ function PayButton({ circleId, obligation, cycle, circle }) {
   );
 }
 
+// ── Last cycle summary card ───────────────────────────────────────────────────
+
+function LastCycleCard({ lcc }) {
+  if (!lcc) return null;
+  return (
+    <div className="card border border-slate-200 bg-slate-50/60 space-y-2">
+      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+        Last cycle — Cycle {lcc.number} summary
+      </p>
+      <div className="space-y-1 text-sm text-slate-600">
+        <p>
+          Pot collected:{' '}
+          <span className="font-semibold text-slate-800">{formatNaira(lcc.potKobo)}</span>
+          {lcc.meta?.shortfallKobo > 0 && (
+            <span className="text-red-500 text-xs ml-2">
+              (↓ {formatNaira(lcc.meta.shortfallKobo)} shortfall)
+            </span>
+          )}
+        </p>
+        <p>
+          Recipient:{' '}
+          <span className="font-semibold text-slate-800">{lcc.recipient?.name ?? '—'}</span>
+        </p>
+        {lcc.missedMembers?.length > 0 && (
+          <p className="text-red-600 text-xs">
+            Missed: {lcc.missedMembers.map((u) => u.name).join(', ')}
+          </p>
+        )}
+      </div>
+      <p className="text-xs text-slate-400 italic">Sandbox — no real money moved</p>
+    </div>
+  );
+}
+
+// ── Demo controls panel ───────────────────────────────────────────────────────
+
+function DemoControlsPanel({ circleId, onSimulated }) {
+  const [pending, setPending]   = useState(null); // action being confirmed
+  const [loading, setLoading]   = useState(false);
+  const [result, setResult]     = useState(null);
+  const [error, setError]       = useState('');
+
+  async function runSimulate(action) {
+    setLoading(true);
+    setResult(null);
+    setError('');
+    setPending(null);
+    try {
+      const res = await circlesApi.simulate(circleId, action);
+      setResult(res);
+      await onSimulated();
+    } catch (err) {
+      setError(err?.response?.data?.error?.message ?? 'Simulation failed.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <>
+      {pending && (
+        <DemoModal
+          action={pending}
+          loading={loading}
+          onConfirm={() => runSimulate(pending)}
+          onCancel={() => setPending(null)}
+        />
+      )}
+
+      <div className="card border border-amber-200 bg-amber-50/60 space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="text-base">🎮</span>
+          <p className="text-sm font-semibold text-amber-800">Demo Controls</p>
+          <span className="ml-auto chip bg-amber-100 text-amber-700 !text-[10px]">Sandbox</span>
+        </div>
+        <p className="text-xs text-amber-700">
+          Time-jump the circle to fire reminders or close the current cycle.
+        </p>
+
+        <div className="flex gap-2">
+          <button
+            id="demo-pass-due-date"
+            onClick={() => setPending('pass-due-date')}
+            disabled={loading}
+            className="btn-ghost flex-1 text-sm !min-h-0 !py-2 border-amber-300 text-amber-700 hover:bg-amber-100"
+          >
+            {loading ? <span className="flex items-center gap-2"><span className="w-3 h-3 border-2 border-amber-400/40 border-t-amber-600 rounded-full animate-spin" />Running…</span> : '⏰ Pass due date'}
+          </button>
+          <button
+            id="demo-close-cycle"
+            onClick={() => setPending('close-cycle')}
+            disabled={loading}
+            className="btn-primary flex-1 text-sm !min-h-0 !py-2 !bg-amber-600 hover:!bg-amber-700 active:!bg-amber-800"
+          >
+            {loading ? <span className="flex items-center gap-2"><Spinner />Running…</span> : '⏩ Close cycle'}
+          </button>
+        </div>
+
+        {error && (
+          <p role="alert" className="text-xs text-red-600">{error}</p>
+        )}
+
+        {result && (
+          <div className="bg-white rounded-xl p-3 text-xs text-slate-600 space-y-1 border border-amber-100">
+            <p className="font-semibold text-slate-800">Simulation result</p>
+            {result.engineSummary?.[0] && (
+              <p>
+                Cycles closed: <strong>{result.engineSummary[0].cyclesClosed}</strong>
+                {result.engineSummary[0].missedCount > 0 && (
+                  <span className="text-red-600"> · {result.engineSummary[0].missedCount} missed</span>
+                )}
+              </p>
+            )}
+            {result.reminderSummary && (
+              <p>Emails queued: <strong>{result.reminderSummary.emailsSent}</strong></p>
+            )}
+            <p className="text-slate-400">simulatedNow: {new Date(result.simulatedNow).toLocaleString()}</p>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
 // ── Tab: Overview ─────────────────────────────────────────────────────────────
-function OverviewTab({ data, circleId }) {
-  const { circle, members, currentCycle, myObligation, obligations, isOrganizer } = data;
+
+function OverviewTab({ data, circleId, onRefresh }) {
+  const { circle, members, currentCycle, myObligation, obligations, isOrganizer, lastClosedCycle } = data;
 
   const inviteUrl = isOrganizer && circle.inviteCode
     ? `${window.location.origin}/join/${circle.inviteCode}`
@@ -135,6 +302,11 @@ function OverviewTab({ data, circleId }) {
 
   return (
     <div className="space-y-4">
+      {/* Demo controls — DEMO_MODE only, organizer only, active circles only */}
+      {DEMO_MODE && isOrganizer && circle.status === 'active' && (
+        <DemoControlsPanel circleId={circleId} onSimulated={onRefresh} />
+      )}
+
       {/* Organiser invite card — only in forming status */}
       {isOrganizer && circle.status === 'forming' && inviteUrl && (
         <div className="card border-primary-100 bg-primary-50/60 space-y-3">
@@ -148,6 +320,9 @@ function OverviewTab({ data, circleId }) {
           </div>
         </div>
       )}
+
+      {/* Last closed cycle summary */}
+      {lastClosedCycle && <LastCycleCard lcc={lastClosedCycle} />}
 
       {/* Current cycle card */}
       {currentCycle ? (
@@ -169,16 +344,10 @@ function OverviewTab({ data, circleId }) {
             <p className="text-sm text-slate-500">Expected pot: <span className="font-semibold text-slate-800">{formatNaira(currentCycle.expectedPotKobo)}</span></p>
           </div>
 
-          {/* My contribution + Pay button */}
           {myObligation && (
             <div className="pt-2 border-t border-slate-100 space-y-2">
               <p className="text-xs text-slate-400">My contribution</p>
-              <PayButton
-                circleId={circleId}
-                obligation={myObligation}
-                cycle={currentCycle}
-                circle={circle}
-              />
+              <PayButton circleId={circleId} obligation={myObligation} cycle={currentCycle} />
             </div>
           )}
         </div>
@@ -196,19 +365,29 @@ function OverviewTab({ data, circleId }) {
         <div className="card space-y-3">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Who has paid</p>
           <div className="divide-y divide-slate-50">
-            {obligations.map((ob) => (
-              <div key={ob._id} className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 text-xs font-bold">
-                    {ob.user?.name?.[0]?.toUpperCase() ?? '?'}
+            {obligations.map((ob) => {
+              // Find trust from members array
+              const member = members.find((m) => String(m.user?._id ?? m.user) === String(ob.user?._id ?? ob.user));
+              const trust  = member?.trust;
+              return (
+                <div key={ob._id} className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 text-xs font-bold shrink-0">
+                      {ob.user?.name?.[0]?.toUpperCase() ?? '?'}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm text-slate-700 truncate">{ob.user?.name ?? 'Unknown'}</p>
+                      {trust?.tier && (
+                        <span className={`inline-flex items-center px-1.5 py-0 rounded-full text-[10px] font-medium ${TIER_CHIP[trust.tier] ?? 'bg-slate-100 text-slate-500'}`}>
+                          {trust.tier === 'building' ? '…building' : `${trust.score}%`}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <span className="text-sm text-slate-700">{ob.user?.name ?? 'Unknown'}</span>
+                  <StatusChip status={ob.status} />
                 </div>
-                <span className={OBLIGATION_CHIP[ob.status] ?? 'chip bg-slate-100 text-slate-500'}>
-                  {ob.status.replace('_', ' ')}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -217,6 +396,7 @@ function OverviewTab({ data, circleId }) {
 }
 
 // ── Tab: Members ──────────────────────────────────────────────────────────────
+
 function MembersTab({ data, onReorder, onStart, reorderLoading, startLoading }) {
   const { circle, members, isOrganizer } = data;
   const canReorder = isOrganizer && circle.status === 'forming';
@@ -238,7 +418,7 @@ function MembersTab({ data, onReorder, onStart, reorderLoading, startLoading }) 
   return (
     <div className="space-y-4">
       {reorderError && (
-        <div role="alert" className="px-4 py-3 rounded-xl bg-danger-50 border border-danger-200 text-danger-700 text-sm">{reorderError}</div>
+        <div role="alert" className="px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">{reorderError}</div>
       )}
       <div className="card divide-y divide-slate-50">
         {members.map((m, idx) => (
@@ -249,6 +429,11 @@ function MembersTab({ data, onReorder, onStart, reorderLoading, startLoading }) 
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-slate-800 truncate">{m.user?.name ?? 'Unknown'}</p>
+              {m.trust?.tier && (
+                <span className={`inline-flex items-center px-1.5 py-0 rounded-full text-[10px] font-medium ${TIER_CHIP[m.trust.tier] ?? 'bg-slate-100 text-slate-500'}`}>
+                  {m.trust.tier === 'building' ? 'Building history' : `${m.trust.score}% · ${m.trust.tier}`}
+                </span>
+              )}
             </div>
             <span className={`chip text-xs shrink-0 ${m.role === 'organizer' ? 'chip-green' : 'bg-slate-100 text-slate-500'}`}>{m.role}</span>
             {canReorder && (
@@ -283,6 +468,7 @@ function MembersTab({ data, onReorder, onStart, reorderLoading, startLoading }) 
 }
 
 // ── Tab: Ledger ───────────────────────────────────────────────────────────────
+
 function LedgerTab({ circleId }) {
   const [entries, setEntries]         = useState([]);
   const [loading, setLoading]         = useState(true);
@@ -343,7 +529,66 @@ function LedgerTab({ circleId }) {
   }
 
   if (error) {
-    return <p className="text-sm text-danger-600 text-center py-8">{error}</p>;
+    return <p className="text-sm text-red-600 text-center py-8">{error}</p>;
+  }
+
+  function LedgerEntryRow({ e }) {
+    const meta = LEDGER_TYPE_META[e.type] ?? { label: e.type, icon: '?', color: 'text-slate-500 bg-slate-50' };
+    const isMissed  = e.type === 'missed';
+    const isPayout  = e.type === 'payout';
+
+    return (
+      <div className="card !p-3 space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${meta.color}`}>
+              {meta.icon}
+            </span>
+            <div>
+              <p className={`text-sm font-medium ${isMissed ? 'text-red-700' : isPayout ? 'text-purple-700' : 'text-slate-800'}`}>
+                {meta.label}
+              </p>
+              <p className="text-xs text-slate-400">Seq #{e.seq}</p>
+            </div>
+          </div>
+          <div className="text-right shrink-0">
+            <p className={`text-sm font-semibold ${isMissed ? 'text-red-600' : isPayout ? 'text-purple-600' : 'text-slate-800'}`}>
+              {formatNaira(e.amountKobo)}
+            </p>
+            <div className="flex gap-1 justify-end mt-0.5">
+              {e.sandbox && <span className="chip bg-amber-50 text-amber-600 !text-[10px]">sandbox</span>}
+              {isPayout && <span className="chip bg-purple-50 text-purple-600 !text-[10px]">payout</span>}
+            </div>
+          </div>
+        </div>
+
+        {/* Missed note */}
+        {isMissed && (
+          <p className="text-xs text-red-500 bg-red-50 rounded-lg px-2 py-1">
+            ⚠ Not money moved — obligation was not fulfilled before the deadline.
+          </p>
+        )}
+
+        {/* Payout shortfall */}
+        {isPayout && e.meta?.shortfallKobo > 0 && (
+          <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-2 py-1">
+            ↓ {formatNaira(e.meta.shortfallKobo)} shortfall — some members missed their contribution.
+          </p>
+        )}
+
+        <div className="flex items-center justify-between text-xs text-slate-400">
+          <span>{e.user?.name ?? '—'} · Cycle {e.cycleNumber}</span>
+          <span>{formatDate(new Date(e.createdAt))}</span>
+        </div>
+        <button
+          title="Copy full hash"
+          onClick={() => copyHash(e.hash)}
+          className="text-left text-xs font-mono text-slate-300 hover:text-slate-500 transition-colors"
+        >
+          {copiedHash === e.hash ? 'Copied!' : e.hash.slice(0, 8) + '…'}
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -351,12 +596,7 @@ function LedgerTab({ circleId }) {
       {/* Verify button */}
       <div className="flex items-center justify-between">
         <p className="text-xs text-slate-400">{entries.length} entr{entries.length !== 1 ? 'ies' : 'y'}</p>
-        <button
-          id="verify-ledger-btn"
-          onClick={handleVerify}
-          disabled={verifying}
-          className="btn-ghost text-xs py-1.5 px-3"
-        >
+        <button id="verify-ledger-btn" onClick={handleVerify} disabled={verifying} className="btn-ghost text-xs py-1.5 px-3">
           {verifying ? (
             <span className="flex items-center gap-1.5">
               <span className="w-3 h-3 border-2 border-primary-700/30 border-t-primary-700 rounded-full animate-spin" />
@@ -366,12 +606,11 @@ function LedgerTab({ circleId }) {
         </button>
       </div>
 
-      {/* Verify result */}
       {verifyResult && (
         <div className={`px-4 py-3 rounded-xl border text-sm ${
           verifyResult.ok
             ? 'bg-primary-50 border-primary-200 text-primary-800'
-            : 'bg-danger-50 border-danger-200 text-danger-700'
+            : 'bg-red-50 border-red-200 text-red-700'
         }`}>
           {verifyResult.ok
             ? `✓ Ledger intact — ${verifyResult.checked} entr${verifyResult.checked !== 1 ? 'ies' : 'y'} verified`
@@ -379,7 +618,6 @@ function LedgerTab({ circleId }) {
         </div>
       )}
 
-      {/* Empty state */}
       {entries.length === 0 && (
         <div className="card text-center py-10 space-y-2">
           <p className="text-2xl">📒</p>
@@ -388,120 +626,31 @@ function LedgerTab({ circleId }) {
         </div>
       )}
 
-      {/* Entries — cards on mobile, table-like on large screens */}
-      {entries.length > 0 && (
-        <>
-          {/* Mobile cards */}
-          <div className="space-y-2 sm:hidden">
-            {entries.map((e) => {
-              const meta = LEDGER_TYPE_META[e.type] ?? { label: e.type, icon: '?', color: 'text-slate-500 bg-slate-50' };
-              return (
-                <div key={e._id} className="card !p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${meta.color}`}>
-                        {meta.icon}
-                      </span>
-                      <div>
-                        <p className="text-sm font-medium text-slate-800">{meta.label}</p>
-                        <p className="text-xs text-slate-400">Seq #{e.seq}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-slate-800">{formatNaira(e.amountKobo)}</p>
-                      {e.sandbox && <span className="chip bg-amber-50 text-amber-600 !text-[10px]">sandbox</span>}
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-slate-400">
-                    <span>{e.user?.name ?? '—'} · Cycle {e.cycleNumber}</span>
-                    <span>{formatDate(new Date(e.createdAt))}</span>
-                  </div>
-                  <button
-                    title="Copy full hash"
-                    onClick={() => copyHash(e.hash)}
-                    className="text-left text-xs font-mono text-slate-300 hover:text-slate-500 transition-colors"
-                  >
-                    {copiedHash === e.hash ? 'Copied!' : e.hash.slice(0, 8) + '…'}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+      <div className="space-y-2">
+        {entries.map((e) => <LedgerEntryRow key={e._id} e={e} />)}
+      </div>
 
-          {/* Large-screen table */}
-          <div className="hidden sm:block card !p-0 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 text-left text-xs text-slate-400 font-medium uppercase tracking-wide">
-                  <th className="px-4 py-3">Seq</th>
-                  <th className="px-4 py-3">Type</th>
-                  <th className="px-4 py-3">Member</th>
-                  <th className="px-4 py-3">Amount</th>
-                  <th className="px-4 py-3">Cycle</th>
-                  <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">Hash</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {entries.map((e) => {
-                  const meta = LEDGER_TYPE_META[e.type] ?? { label: e.type, icon: '?', color: 'text-slate-500 bg-slate-50' };
-                  return (
-                    <tr key={e._id} className="hover:bg-slate-50/50">
-                      <td className="px-4 py-3 text-slate-400">#{e.seq}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${meta.color}`}>{meta.icon}</span>
-                          <span className="font-medium text-slate-700">{meta.label}</span>
-                          {e.sandbox && <span className="chip bg-amber-50 text-amber-600 !text-[10px]">sandbox</span>}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-slate-600">{e.user?.name ?? '—'}</td>
-                      <td className="px-4 py-3 font-semibold text-slate-800">{formatNaira(e.amountKobo)}</td>
-                      <td className="px-4 py-3 text-slate-400">{e.cycleNumber}</td>
-                      <td className="px-4 py-3 text-slate-400">{formatDateTime(new Date(e.createdAt))}</td>
-                      <td className="px-4 py-3">
-                        <button
-                          title="Copy full hash"
-                          onClick={() => copyHash(e.hash)}
-                          className="font-mono text-xs text-slate-300 hover:text-slate-600 transition-colors"
-                        >
-                          {copiedHash === e.hash ? 'Copied!' : e.hash.slice(0, 8) + '…'}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {hasMore && (
-            <button
-              id="ledger-load-more"
-              onClick={handleLoadMore}
-              disabled={loadingMore}
-              className="btn-ghost w-full text-sm"
-            >
-              {loadingMore ? 'Loading…' : 'Load more'}
-            </button>
-          )}
-        </>
+      {hasMore && (
+        <button id="ledger-load-more" onClick={handleLoadMore} disabled={loadingMore} className="btn-ghost w-full text-sm">
+          {loadingMore ? 'Loading…' : 'Load more'}
+        </button>
       )}
     </div>
   );
 }
 
 // ── Main CircleDetail page ────────────────────────────────────────────────────
+
 const TABS = ['Overview', 'Members', 'Ledger'];
 
 export default function CircleDetail() {
   const { id } = useParams();
   const { user } = useAuth();
 
-  const [data, setData]               = useState(null);
-  const [loading, setLoading]         = useState(true);
-  const [error, setError]             = useState('');
-  const [activeTab, setActiveTab]     = useState('Overview');
+  const [data, setData]                     = useState(null);
+  const [loading, setLoading]               = useState(true);
+  const [error, setError]                   = useState('');
+  const [activeTab, setActiveTab]           = useState('Overview');
   const [reorderLoading, setReorderLoading] = useState(false);
   const [startLoading, setStartLoading]     = useState(false);
   const [startError, setStartError]         = useState('');
@@ -578,7 +727,7 @@ export default function CircleDetail() {
       </p>
 
       {startError && (
-        <div role="alert" className="mb-4 px-4 py-3 rounded-xl bg-danger-50 border border-danger-200 text-danger-700 text-sm">{startError}</div>
+        <div role="alert" className="mb-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">{startError}</div>
       )}
 
       {/* Tab bar */}
@@ -599,8 +748,7 @@ export default function CircleDetail() {
         ))}
       </div>
 
-      {/* Tab content */}
-      {activeTab === 'Overview' && <OverviewTab data={data} circleId={id} />}
+      {activeTab === 'Overview' && <OverviewTab data={data} circleId={id} onRefresh={fetchDetail} />}
       {activeTab === 'Members' && (
         <MembersTab
           data={data}

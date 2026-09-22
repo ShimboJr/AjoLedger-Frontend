@@ -22,4 +22,11 @@ export const circlesApi = {
 
   /** Start a circle — locks membership and creates all cycles. */
   start: (id) => api.post(`/circles/${id}/start`).then((r) => r.data.data),
+
+  /**
+   * Simulate a time-jump (DEMO_MODE only, organizer only).
+   * action: 'pass-due-date' | 'close-cycle'
+   */
+  simulate: (id, action) =>
+    api.post(`/circles/${id}/simulate`, { action }).then((r) => r.data.data),
 };

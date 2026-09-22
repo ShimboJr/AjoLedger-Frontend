@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { circlesApi } from '../api/circles.js';
+import { meApi } from '../api/me.js';
 import { formatNaira } from '../utils/money.js';
 import { formatDate, relativeDays } from '../utils/dates.js';
 import { CircleCardSkeleton } from '../components/LoadingSkeleton.jsx';
+import StatusChip from '../components/StatusChip.jsx';
 
 const FREQ_LABEL = { weekly: 'weekly', biweekly: 'every 2 weeks', monthly: 'monthly' };
 
@@ -14,22 +16,99 @@ const STATUS_CHIP = {
   completed: 'chip bg-slate-100 text-slate-500',
 };
 
-const OBLIGATION_CHIP = {
-  pending:       'chip chip-amber',
-  paid_on_time:  'chip chip-green',
-  paid_late:     'chip bg-blue-100 text-blue-700',
-  missed:        'chip chip-red',
+// ── Tier config ───────────────────────────────────────────────────────────────
+
+const TIER_CFG = {
+  excellent: { color: '#10b981', label: 'Exceptional — always pays on time' },
+  good:      { color: '#0f4c81', label: 'Reliable — rarely misses' },
+  fair:      { color: '#f59e0b', label: 'Developing — occasional delays' },
+  poor:      { color: '#ef4444', label: 'Needs improvement' },
+  building:  { color: '#94a3b8', label: 'Building your history' },
 };
+
+// ── Reliability card ──────────────────────────────────────────────────────────
+
+function ReliabilityCard({ trust }) {
+  if (!trust) return null;
+  const { score, tier, onTime, late, missed, resolved } = trust;
+  const cfg = TIER_CFG[tier] ?? TIER_CFG.building;
+  const isBuilding = tier === 'building';
+
+  // SVG ring
+  const r    = 30;
+  const circ = 2 * Math.PI * r;
+  const pct  = score !== null ? score / 100 : 0;
+  const dash = pct * circ;
+
+  return (
+    <div className="card flex items-center gap-4 mb-4">
+      {/* Score ring */}
+      <div className="shrink-0">
+        <svg width="72" height="72" viewBox="0 0 72 72" aria-hidden="true">
+          {/* Track */}
+          <circle cx="36" cy="36" r={r} fill="none" stroke="#e2e8f0" strokeWidth="6" />
+          {/* Progress */}
+          {!isBuilding && (
+            <circle
+              cx="36" cy="36" r={r}
+              fill="none"
+              stroke={cfg.color}
+              strokeWidth="6"
+              strokeDasharray={`${dash} ${circ}`}
+              strokeLinecap="round"
+              transform="rotate(-90 36 36)"
+              style={{ transition: 'stroke-dasharray 0.6s ease' }}
+            />
+          )}
+          {/* Label inside ring */}
+          <text x="36" y="36" textAnchor="middle" dominantBaseline="middle" className="text-xs" style={{ fill: cfg.color, fontWeight: 700, fontSize: 14 }}>
+            {isBuilding ? '—' : `${score}`}
+          </text>
+          {!isBuilding && (
+            <text x="36" y="47" textAnchor="middle" dominantBaseline="middle" style={{ fill: '#94a3b8', fontSize: 9 }}>%</text>
+          )}
+        </svg>
+      </div>
+
+      {/* Details */}
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-sm text-slate-800">My reliability</p>
+        <p className="text-xs mt-0.5" style={{ color: cfg.color }}>{cfg.label}</p>
+
+        {isBuilding ? (
+          <div className="mt-2">
+            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-slate-300 rounded-full transition-all duration-500"
+                style={{ width: `${Math.min((resolved / 3) * 100, 100)}%` }}
+              />
+            </div>
+            <p className="text-[10px] text-slate-400 mt-1">{resolved} of 3 payments needed to score</p>
+          </div>
+        ) : (
+          <div className="flex gap-3 mt-2 text-xs text-slate-500">
+            <span><span className="font-semibold text-emerald-600">{onTime}</span> on time</span>
+            <span><span className="font-semibold text-orange-500">{late}</span> late</span>
+            <span><span className="font-semibold text-red-500">{missed}</span> missed</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const { user } = useAuth();
   const [circles, setCircles] = useState([]);
+  const [trust, setTrust]     = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState('');
 
   useEffect(() => {
-    circlesApi.list()
-      .then((d) => setCircles(d.circles))
+    Promise.all([
+      circlesApi.list().then((d) => setCircles(d.circles)),
+      meApi.getTrust().then(setTrust).catch(() => { /* trust is non-critical */ }),
+    ])
       .catch(() => setError('Could not load your circles. Please refresh.'))
       .finally(() => setLoading(false));
   }, []);
@@ -39,7 +118,7 @@ export default function Dashboard() {
   return (
     <div className="page-container">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="font-display text-2xl font-bold text-slate-900">My Circles</h1>
           <p className="text-sm text-slate-500 mt-0.5">Welcome back, {firstName}.</p>
@@ -48,6 +127,9 @@ export default function Dashboard() {
           + Create
         </Link>
       </div>
+
+      {/* Reliability card */}
+      {!loading && <ReliabilityCard trust={trust} />}
 
       {/* Error */}
       {error && (
@@ -119,9 +201,7 @@ export default function Dashboard() {
                 )}
 
                 {c.status === 'active' && c.myObligationStatus && (
-                  <span className={`${OBLIGATION_CHIP[c.myObligationStatus]} !text-xs !py-0.5`}>
-                    {c.myObligationStatus.replace('_', ' ')}
-                  </span>
+                  <StatusChip status={c.myObligationStatus} className="!py-0.5" />
                 )}
 
                 {c.status === 'forming' && (
