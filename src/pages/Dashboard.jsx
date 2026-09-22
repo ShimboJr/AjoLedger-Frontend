@@ -41,7 +41,7 @@ function ReliabilityCard({ trust }) {
   const dash = pct * circ;
 
   return (
-    <div className="card flex items-center gap-4 mb-4">
+    <Link to="/trust" className="card flex items-center gap-4 mb-4 hover:shadow-md transition-shadow active:scale-[0.99]" id="dashboard-reliability-card">
       {/* Score ring */}
       <div className="shrink-0">
         <svg width="72" height="72" viewBox="0 0 72 72" aria-hidden="true">
@@ -93,7 +93,12 @@ function ReliabilityCard({ trust }) {
           </div>
         )}
       </div>
-    </div>
+
+      {/* Arrow hint */}
+      <svg className="w-4 h-4 text-slate-300 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+      </svg>
+    </Link>
   );
 }
 
@@ -175,9 +180,9 @@ export default function Dashboard() {
               className="card block hover:shadow-md transition-shadow active:scale-[0.99]"
               id={`circle-card-${c._id}`}
             >
-              <div className="flex items-start justify-between mb-2">
-                <p className="font-semibold text-slate-800 leading-snug pr-2">{c.name}</p>
-                <span className={STATUS_CHIP[c.status] ?? 'chip bg-slate-100 text-slate-500'}>
+              <div className="flex items-start justify-between mb-2 gap-2">
+                <p className="font-semibold text-slate-800 leading-snug truncate min-w-0">{c.name}</p>
+                <span className={`${STATUS_CHIP[c.status] ?? 'chip bg-slate-100 text-slate-500'} shrink-0`}>
                   {c.status}
                 </span>
               </div>

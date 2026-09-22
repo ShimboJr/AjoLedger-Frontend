@@ -11,6 +11,9 @@ import CreateCircle     from './pages/CreateCircle.jsx';
 import CircleDetail     from './pages/CircleDetail.jsx';
 import JoinCircle       from './pages/JoinCircle.jsx';
 import PaymentCallback  from './pages/PaymentCallback.jsx';
+import TrustPage        from './pages/TrustPage.jsx';
+import PublicTrustPage  from './pages/PublicTrustPage.jsx';
+import ProfilePage      from './pages/ProfilePage.jsx';
 import NotFound         from './pages/NotFound.jsx';
 
 function RedirectIfLoggedIn({ children }) {
@@ -32,13 +35,16 @@ function AppRoutes() {
         {/* Public join preview — JoinCircle handles its own auth check internally */}
         <Route path="/join/:code" element={<JoinCircle />} />
 
+        {/* Public trust profile — minimal chrome, no login required */}
+        <Route path="/t/:slug" element={<PublicTrustPage />} />
+
         {/* Protected */}
         <Route path="/dashboard"           element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/circles/new"         element={<ProtectedRoute><CreateCircle /></ProtectedRoute>} />
         <Route path="/circles/:id"         element={<ProtectedRoute><CircleDetail /></ProtectedRoute>} />
         <Route path="/payments/callback"   element={<ProtectedRoute><PaymentCallback /></ProtectedRoute>} />
-
-        {/* Day 4+: trust profile, payments routes */}
+        <Route path="/trust"               element={<ProtectedRoute><TrustPage /></ProtectedRoute>} />
+        <Route path="/profile"             element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
 
         {/* Catch-all */}
         <Route path="*" element={<NotFound />} />

@@ -29,4 +29,21 @@ export const circlesApi = {
    */
   simulate: (id, action) =>
     api.post(`/circles/${id}/simulate`, { action }).then((r) => r.data.data),
+
+  /**
+   * Download the ledger as a CSV blob.
+   * Uses Bearer token via axios so auth is preserved.
+   * @returns {Promise<{ blob: Blob, filename: string }>}
+   */
+  downloadLedgerCsv: async (id) => {
+    const response = await api.get(`/circles/${id}/ledger.csv`, {
+      responseType: 'blob',
+    });
+    // Extract filename from Content-Disposition header
+    const disposition = response.headers['content-disposition'] ?? '';
+    const match = disposition.match(/filename="([^"]+)"/);
+    const filename = match ? match[1] : `ledger-${id}.csv`;
+    return { blob: response.data, filename };
+  },
 };
+

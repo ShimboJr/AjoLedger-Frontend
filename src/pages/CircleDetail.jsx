@@ -479,6 +479,8 @@ function LedgerTab({ circleId }) {
   const [verifying, setVerifying]       = useState(false);
   const [error, setError]             = useState('');
   const [copiedHash, setCopiedHash]   = useState('');
+  const [csvLoading, setCsvLoading]   = useState(false);
+  const [csvError, setCsvError]       = useState('');
 
   async function loadEntries(cursor = null, append = false) {
     try {
@@ -511,6 +513,27 @@ function LedgerTab({ circleId }) {
       setVerifyResult({ ok: false, checked: 0, reason: 'Verification request failed' });
     } finally {
       setVerifying(false);
+    }
+  }
+
+  async function handleDownloadCsv() {
+    setCsvLoading(true);
+    setCsvError('');
+    try {
+      const { blob, filename } = await circlesApi.downloadLedgerCsv(circleId);
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href     = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      setCsvError('Download failed. Please try again.');
+      setTimeout(() => setCsvError(''), 4000);
+    } finally {
+      setCsvLoading(false);
     }
   }
 
@@ -593,18 +616,41 @@ function LedgerTab({ circleId }) {
 
   return (
     <div className="space-y-4">
-      {/* Verify button */}
-      <div className="flex items-center justify-between">
+      {/* Toolbar: entry count + verify + CSV download */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <p className="text-xs text-slate-400">{entries.length} entr{entries.length !== 1 ? 'ies' : 'y'}</p>
-        <button id="verify-ledger-btn" onClick={handleVerify} disabled={verifying} className="btn-ghost text-xs py-1.5 px-3">
-          {verifying ? (
-            <span className="flex items-center gap-1.5">
-              <span className="w-3 h-3 border-2 border-primary-700/30 border-t-primary-700 rounded-full animate-spin" />
-              Verifying…
-            </span>
-          ) : '🔒 Verify ledger'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button id="verify-ledger-btn" onClick={handleVerify} disabled={verifying} className="btn-ghost text-xs py-1.5 px-3" style={{ minHeight: 44 }}>
+            {verifying ? (
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 border-2 border-primary-700/30 border-t-primary-700 rounded-full animate-spin" />
+                Verifying…
+              </span>
+            ) : '🔒 Verify'}
+          </button>
+          <button
+            id="download-csv-btn"
+            onClick={handleDownloadCsv}
+            disabled={csvLoading}
+            className="btn-ghost text-xs py-1.5 px-3"
+            style={{ minHeight: 44 }}
+          >
+            {csvLoading ? (
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 border-2 border-slate-400/30 border-t-slate-500 rounded-full animate-spin" />
+                Downloading…
+              </span>
+            ) : '⬇ CSV'}
+          </button>
+        </div>
       </div>
+
+      {/* CSV error toast */}
+      {csvError && (
+        <div role="alert" className="px-4 py-2 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">
+          {csvError}
+        </div>
+      )}
 
       {verifyResult && (
         <div className={`px-4 py-3 rounded-xl border text-sm ${
