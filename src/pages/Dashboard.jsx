@@ -7,6 +7,7 @@ import { formatNaira } from '../utils/money.js';
 import { formatDate, relativeDays } from '../utils/dates.js';
 import { CircleCardSkeleton } from '../components/LoadingSkeleton.jsx';
 import StatusChip from '../components/StatusChip.jsx';
+import { usePageTitle } from '../hooks/usePageTitle.js';
 
 const FREQ_LABEL = { weekly: 'weekly', biweekly: 'every 2 weeks', monthly: 'monthly' };
 
@@ -103,6 +104,7 @@ function ReliabilityCard({ trust }) {
 }
 
 export default function Dashboard() {
+  usePageTitle('My Circles');
   const { user } = useAuth();
   const [circles, setCircles] = useState([]);
   const [trust, setTrust]     = useState(null);

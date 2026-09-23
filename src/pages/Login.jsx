@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { usePageTitle } from '../hooks/usePageTitle.js';
 
 function FieldError({ message }) {
   if (!message) return null;
@@ -8,6 +9,7 @@ function FieldError({ message }) {
 }
 
 export default function Login() {
+  usePageTitle('Sign in');
   const { login } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();

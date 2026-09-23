@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { brand } from '../config/brand.js';
+import { usePageTitle } from '../hooks/usePageTitle.js';
 
 const HOW_IT_WORKS = [
   {
@@ -20,6 +21,7 @@ const HOW_IT_WORKS = [
 ];
 
 export default function Landing() {
+  usePageTitle('Provably honest savings circles');
   return (
     <div className="page-container !pb-12 !pt-8 space-y-16">
 

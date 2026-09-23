@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { brand } from '../config/brand.js';
+import { usePageTitle } from '../hooks/usePageTitle.js';
 
 function FieldError({ message }) {
   if (!message) return null;
@@ -9,6 +10,7 @@ function FieldError({ message }) {
 }
 
 export default function Register() {
+  usePageTitle('Create account');
   const { register } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();

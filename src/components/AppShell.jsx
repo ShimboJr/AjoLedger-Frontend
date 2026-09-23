@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import SandboxBanner from './SandboxBanner.jsx';
@@ -208,11 +208,16 @@ function NotificationBell() {
 
 export default function AppShell({ children }) {
   const { user, loading } = useAuth();
+  const { pathname } = useLocation();
+
+  // Suppress sandbox banner on public trust profile pages (/t/:slug)
+  // — these pages are shared externally and the banner is confusing for recipients
+  const showSandboxBanner = !pathname.startsWith('/t/');
 
   return (
     <div className="min-h-dvh flex flex-col">
-      {/* Persistent sandbox banner */}
-      <SandboxBanner />
+      {/* Persistent sandbox banner — hidden on public trust profile pages */}
+      {showSandboxBanner && <SandboxBanner />}
 
       {/* Top bar */}
       <header className="sticky top-0 z-30 bg-white border-b border-slate-200">

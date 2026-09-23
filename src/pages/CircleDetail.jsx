@@ -7,6 +7,7 @@ import { formatNaira } from '../utils/money.js';
 import { formatDate, formatDateTime, relativeDays } from '../utils/dates.js';
 import { CircleDetailSkeleton, Skeleton } from '../components/LoadingSkeleton.jsx';
 import StatusChip from '../components/StatusChip.jsx';
+import { usePageTitle } from '../hooks/usePageTitle.js';
 
 const FREQ_LABEL = { weekly: 'week', biweekly: '2 weeks', monthly: 'month' };
 const STATUS_CHIP = {
@@ -789,6 +790,7 @@ export default function CircleDetail() {
   const { user } = useAuth();
 
   const [data, setData]                     = useState(null);
+  usePageTitle(data?.circle?.name ?? 'Circle');
   const [loading, setLoading]               = useState(true);
   const [error, setError]                   = useState('');
   const [activeTab, setActiveTab]           = useState('Overview');

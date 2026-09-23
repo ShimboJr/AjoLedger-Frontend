@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { meApi } from '../api/me.js';
+import { usePageTitle } from '../hooks/usePageTitle.js';
 
 // ── Tier config ────────────────────────────────────────────────────────────────
 
@@ -87,6 +88,7 @@ function CopyButton({ text, id }) {
 // ── Main page ──────────────────────────────────────────────────────────────────
 
 export default function TrustPage() {
+  usePageTitle('My Reliability');
   const [profile, setProfile]   = useState(null);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState('');

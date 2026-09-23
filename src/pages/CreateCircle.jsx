@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { circlesApi } from '../api/circles.js';
 import { formatNaira, toKobo } from '../utils/money.js';
+import { usePageTitle } from '../hooks/usePageTitle.js';
 
 const FREQ_LABEL = { weekly: 'week', biweekly: '2 weeks', monthly: 'month' };
 
@@ -17,6 +18,7 @@ function todayLocal() {
 }
 
 export default function CreateCircle() {
+  usePageTitle('Create a circle');
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
