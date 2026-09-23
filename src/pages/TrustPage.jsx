@@ -285,6 +285,17 @@ export default function TrustPage() {
           </p>
         </div>
 
+        {/* Private-link warning — shown when sharing is OFF but a slug exists */}
+        {!profile?.isPublic && profile?.slug && (
+          <div className="mt-3 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+            <span className="text-amber-500 text-sm shrink-0 mt-0.5" aria-hidden="true">⚠️</span>
+            <p className="text-xs text-amber-700">
+              <span className="font-semibold">Your profile link is private.</span>{' '}
+              Anyone who opens your link sees "Profile not found." Toggle sharing <strong>on</strong> above to make it accessible.
+            </p>
+          </div>
+        )}
+
         {/* Public link (when enabled) */}
         {profile?.isPublic && profile?.publicUrl && (
           <div className="mt-4 space-y-2">
