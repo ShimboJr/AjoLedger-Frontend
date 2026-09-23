@@ -34,7 +34,7 @@ const KIND_ICON = {
 
 // ── NotificationPanel ─────────────────────────────────────────────────────────
 
-function NotificationPanel({ notifications, unreadCount, onReadAll, onClose }) {
+function NotificationPanel({ notifications, unreadCount, onReadAll, onRead, onClose }) {
   return (
     <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden">
       {/* Header */}
@@ -64,7 +64,7 @@ function NotificationPanel({ notifications, unreadCount, onReadAll, onClose }) {
           <p className="px-4 py-8 text-center text-sm text-slate-400">No notifications yet</p>
         ) : (
           notifications.map((n) => (
-            <NotifItem key={n._id} notif={n} onClose={onClose} />
+            <NotifItem key={n._id} notif={n} onRead={onRead} onClose={onClose} />
           ))
         )}
       </div>
@@ -72,10 +72,16 @@ function NotificationPanel({ notifications, unreadCount, onReadAll, onClose }) {
   );
 }
 
-function NotifItem({ notif, onClose }) {
+function NotifItem({ notif, onRead, onClose }) {
   const icon  = KIND_ICON[notif.kind] ?? '🔔';
   const isNew = !notif.readAt;
   const dest  = notif.circle ? `/circles/${notif.circle}` : null;
+
+  function handleClick() {
+    // Mark as read on any click (navigating OR non-navigating)
+    if (isNew) onRead(notif._id);
+    onClose();
+  }
 
   const inner = (
     <div className={`flex gap-3 px-4 py-3 transition-colors hover:bg-slate-50 ${isNew ? 'bg-primary-50/40' : ''}`}>
@@ -93,12 +99,13 @@ function NotifItem({ notif, onClose }) {
 
   if (dest) {
     return (
-      <Link to={dest} onClick={onClose} className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
+      <Link to={dest} onClick={handleClick} className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
         {inner}
       </Link>
     );
   }
-  return <div>{inner}</div>;
+  // No destination — still clickable to mark read
+  return <button onClick={handleClick} className="w-full text-left">{inner}</button>;
 }
 
 // ── NotificationBell ──────────────────────────────────────────────────────────
@@ -142,6 +149,16 @@ function NotificationBell() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [open]);
 
+  async function handleReadOne(id) {
+    // Optimistic update — flip the dot off immediately
+    setNotifications((prev) =>
+      prev.map((n) => n._id === id ? { ...n, readAt: new Date().toISOString() } : n)
+    );
+    setUnreadCount((c) => Math.max(0, c - 1));
+    // Fire-and-forget — non-critical; bell will resync on next poll
+    notificationsApi.readOne(id).catch(() => { /* silently ignore */ });
+  }
+
   async function handleReadAll() {
     try {
       await notificationsApi.readAll();
@@ -179,6 +196,7 @@ function NotificationBell() {
           notifications={notifications}
           unreadCount={unreadCount}
           onReadAll={handleReadAll}
+          onRead={handleReadOne}
           onClose={() => setOpen(false)}
         />
       )}
