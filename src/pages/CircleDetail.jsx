@@ -65,6 +65,43 @@ function StartModal({ memberCount, onConfirm, onCancel, loading }) {
   );
 }
 
+// ── Remove-member confirmation modal ───────────────────────────────────────
+
+function RemoveMemberModal({ memberName, onConfirm, onCancel, loading }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+        <div className="flex items-center gap-3">
+          <span className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M22 10.5h-6m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM4 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 10.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
+            </svg>
+          </span>
+          <div>
+            <h2 className="font-display text-base font-bold text-slate-900">Remove {memberName}?</h2>
+            <p className="text-xs text-slate-500 mt-0.5">This action cannot be undone.</p>
+          </div>
+        </div>
+        <p className="text-sm text-slate-600">
+          They will be removed from the circle. The invite link will be <strong>reset</strong> so they
+          cannot rejoin with the old link.
+        </p>
+        <div className="flex gap-3 pt-1">
+          <button onClick={onCancel} disabled={loading} className="btn-ghost flex-1">Cancel</button>
+          <button
+            id="confirm-remove-member-btn"
+            onClick={onConfirm}
+            disabled={loading}
+            className="flex-1 py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-semibold text-sm transition-colors disabled:opacity-60"
+          >
+            {loading ? <span className="flex items-center justify-center gap-2"><Spinner />Removing…</span> : 'Remove member'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Demo confirm modal ────────────────────────────────────────────────────────
 
 function DemoModal({ action, onConfirm, onCancel, loading }) {
@@ -412,11 +449,15 @@ function OverviewTab({ data, circleId, onRefresh }) {
 
 // ── Tab: Members ──────────────────────────────────────────────────────────────
 
-function MembersTab({ data, onReorder, onStart, reorderLoading, startLoading }) {
+function MembersTab({ data, onReorder, onRemove, onStart, reorderLoading, startLoading }) {
   const { circle, members, isOrganizer } = data;
   const canReorder = isOrganizer && circle.status === 'forming';
-  const [showStartModal, setShowStartModal] = useState(false);
-  const [reorderError, setReorderError] = useState('');
+  const canRemove  = isOrganizer && circle.status === 'forming';
+  const [showStartModal, setShowStartModal]   = useState(false);
+  const [reorderError, setReorderError]       = useState('');
+  const [removeTarget, setRemoveTarget]       = useState(null); // { userId, name }
+  const [removeLoading, setRemoveLoading]     = useState(false);
+  const [removeError, setRemoveError]         = useState('');
 
   async function move(userId, direction) {
     const idx = members.findIndex((m) => String(m.user._id) === String(userId));
@@ -430,10 +471,27 @@ function MembersTab({ data, onReorder, onStart, reorderLoading, startLoading }) 
     catch (err) { setReorderError(err?.response?.data?.error?.message ?? 'Could not reorder. Please try again.'); }
   }
 
+  async function handleConfirmRemove() {
+    if (!removeTarget) return;
+    setRemoveLoading(true);
+    setRemoveError('');
+    try {
+      await onRemove(removeTarget.userId);
+      setRemoveTarget(null);
+    } catch (err) {
+      setRemoveError(err?.response?.data?.error?.message ?? 'Could not remove member. Please try again.');
+    } finally {
+      setRemoveLoading(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       {reorderError && (
         <div role="alert" className="px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">{reorderError}</div>
+      )}
+      {removeError && (
+        <div role="alert" className="px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">{removeError}</div>
       )}
       <div className="card divide-y divide-slate-50">
         {members.map((m, idx) => (
@@ -446,11 +504,25 @@ function MembersTab({ data, onReorder, onStart, reorderLoading, startLoading }) 
               <p className="text-sm font-medium text-slate-800 truncate">{m.user?.name ?? 'Unknown'}</p>
               {m.trust?.tier && (
                 <span className={`inline-flex items-center px-1.5 py-0 rounded-full text-[10px] font-medium ${TIER_CHIP[m.trust.tier] ?? 'bg-slate-100 text-slate-500'}`}>
-                  {m.trust.tier === 'building' ? 'Building history' : `${m.trust.score}% · ${m.trust.tier}`}
+                  {m.trust.tier === 'building' ? 'Building history' : `${m.trust.score}% \u00b7 ${m.trust.tier}`}
                 </span>
               )}
             </div>
             <span className={`chip text-xs shrink-0 ${m.role === 'organizer' ? 'chip-green' : 'bg-slate-100 text-slate-500'}`}>{m.role}</span>
+
+            {/* Remove button — only for non-organizer rows when organizer is viewing a forming circle */}
+            {canRemove && m.role !== 'organizer' && (
+              <button
+                aria-label={`Remove ${m.user?.name}`}
+                onClick={() => setRemoveTarget({ userId: String(m.user._id), name: m.user?.name ?? 'this member' })}
+                className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M22 10.5h-6m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM4 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 10.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
+                </svg>
+              </button>
+            )}
+
             {canReorder && (
               <div className="flex flex-col gap-0.5 shrink-0">
                 <button aria-label={`Move ${m.user?.name} up`} onClick={() => move(m.user._id, 'up')} disabled={idx === 0 || reorderLoading} className="p-1 rounded hover:bg-slate-100 disabled:opacity-20 transition-colors">
@@ -476,6 +548,14 @@ function MembersTab({ data, onReorder, onStart, reorderLoading, startLoading }) 
           loading={startLoading}
           onConfirm={async () => { await onStart(); setShowStartModal(false); }}
           onCancel={() => setShowStartModal(false)}
+        />
+      )}
+      {removeTarget && (
+        <RemoveMemberModal
+          memberName={removeTarget.name}
+          loading={removeLoading}
+          onConfirm={handleConfirmRemove}
+          onCancel={() => { setRemoveTarget(null); setRemoveError(''); }}
         />
       )}
     </div>
@@ -745,6 +825,11 @@ export default function CircleDetail() {
     }
   }
 
+  async function handleRemoveMember(userId) {
+    await circlesApi.removeMember(id, userId);
+    await fetchDetail();
+  }
+
   async function handleStart() {
     setStartLoading(true);
     setStartError('');
@@ -814,6 +899,7 @@ export default function CircleDetail() {
         <MembersTab
           data={data}
           onReorder={handleReorder}
+          onRemove={handleRemoveMember}
           onStart={handleStart}
           reorderLoading={reorderLoading}
           startLoading={startLoading}

@@ -23,6 +23,10 @@ export const circlesApi = {
   /** Start a circle — locks membership and creates all cycles. */
   start: (id) => api.post(`/circles/${id}/start`).then((r) => r.data.data),
 
+  /** Remove a member (organizer only, circle must be forming). */
+  removeMember: (circleId, userId) =>
+    api.delete(`/circles/${circleId}/members/${userId}`).then((r) => r.data.data),
+
   /**
    * Simulate a time-jump (DEMO_MODE only, organizer only).
    * action: 'pass-due-date' | 'close-cycle'
