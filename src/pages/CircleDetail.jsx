@@ -105,6 +105,21 @@ function PayButton({ circleId, obligation, cycle }) {
   const [paying, setPaying] = useState(false);
   const [error, setError]   = useState('');
 
+  // Reset spinner if the browser restores this page from the Back-Forward Cache
+  // (bfcache) after the user pressed the back button from Paystack checkout.
+  // Without this the spinner keeps spinning forever on bfcache restoration.
+  useEffect(() => {
+    function handlePageShow(e) {
+      if (e.persisted) {
+        // Page was restored from bfcache — reset any in-flight state
+        setPaying(false);
+        setError('');
+      }
+    }
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, []);
+
   if (!obligation || !cycle) return null;
 
   const now = new Date();
