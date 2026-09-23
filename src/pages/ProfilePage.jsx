@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import api from '../api/axios.js';
 import { formatMonthYear } from '../utils/dates.js';
+import { usePageTitle } from '../hooks/usePageTitle.js';
 
 // ── Skeleton loader ─────────────────────────────────────────────────────────
 
@@ -50,6 +51,7 @@ function Avatar({ name }) {
 // ── Main page ────────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
+  usePageTitle('Profile');
   const { user: ctxUser, logout } = useAuth();
   const navigate = useNavigate();
 
