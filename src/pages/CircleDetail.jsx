@@ -224,7 +224,7 @@ function DemoControlsPanel({ circleId, onSimulated }) {
       setResult(res);
       await onSimulated();
     } catch (err) {
-      setError(err?.response?.data?.error?.message ?? 'Simulation failed.');
+      setError(err?.response?.data?.error?.message ?? err?.message ?? 'Simulation failed.');
     } finally {
       setLoading(false);
     }

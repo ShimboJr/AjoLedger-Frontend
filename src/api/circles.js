@@ -28,7 +28,7 @@ export const circlesApi = {
    * action: 'pass-due-date' | 'close-cycle'
    */
   simulate: (id, action) =>
-    api.post(`/circles/${id}/simulate`, { action }).then((r) => r.data.data),
+    api.post(`/circles/${id}/simulate`, { action }, { timeout: 60_000 }).then((r) => r.data.data),
 
   /**
    * Download the ledger as a CSV blob.
