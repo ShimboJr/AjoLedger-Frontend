@@ -6,6 +6,12 @@
 
 const LAGOS_TZ = 'Africa/Lagos';
 
+const MONTH_YEAR_FORMAT = new Intl.DateTimeFormat('en-NG', {
+  timeZone: LAGOS_TZ,
+  year: 'numeric',
+  month: 'long',
+});
+
 const DATE_FORMAT = new Intl.DateTimeFormat('en-NG', {
   timeZone: LAGOS_TZ,
   year: 'numeric',
@@ -50,6 +56,14 @@ export function formatDateTime(dateish) {
 export function formatTime(dateish) {
   if (!dateish) return '—';
   return TIME_FORMAT.format(new Date(dateish));
+}
+
+/**
+ * formatMonthYear(dateish) — e.g. "September 2026"
+ */
+export function formatMonthYear(dateish) {
+  if (!dateish) return '—';
+  return MONTH_YEAR_FORMAT.format(new Date(dateish));
 }
 
 /**
