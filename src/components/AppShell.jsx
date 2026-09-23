@@ -207,7 +207,7 @@ function NotificationBell() {
 // ── AppShell ──────────────────────────────────────────────────────────────────
 
 export default function AppShell({ children }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
   return (
     <div className="min-h-dvh flex flex-col">
@@ -224,7 +224,13 @@ export default function AppShell({ children }) {
           </Link>
 
           <div className="flex items-center gap-1">
-            {user ? (
+            {loading ? (
+              /* Auth is resolving — show a neutral placeholder so guest buttons never flash */
+              <div className="flex items-center gap-2 animate-pulse">
+                <div className="w-20 h-7 rounded-lg bg-slate-100" />
+                <div className="w-24 h-7 rounded-lg bg-slate-100" />
+              </div>
+            ) : user ? (
               <NotificationBell />
             ) : (
               <>
@@ -254,7 +260,7 @@ export default function AppShell({ children }) {
       </main>
 
       {/* Bottom nav — only when authenticated */}
-      {user && <BottomNav />}
+      {!loading && user && <BottomNav />}
     </div>
   );
 }
