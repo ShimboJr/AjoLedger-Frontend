@@ -554,49 +554,29 @@ Pages are lazy-loaded with React `Suspense` so the initial application bundle ca
 
 ## Screenshots
 
-### Landing Page
+| Landing | Login |
+|---|---|
+| ![AjoLedger Landing Page](docs/screenshots/landing.jpg) | ![AjoLedger Login Page](docs/screenshots/login.jpg) |
 
-![AjoLedger Landing Page](docs/screenshots/landing.jpg)
+| Register | Dashboard |
+|---|---|
+| ![AjoLedger Registration Page](docs/screenshots/register.jpg) | ![AjoLedger Dashboard](docs/screenshots/dashboard.jpg) |
 
-### Login Page
+| Create Circle | Circle Detail |
+|---|---|
+| ![Create Circle](docs/screenshots/create-circle.jpg) | ![Circle Detail](docs/screenshots/circle-detail.jpg) |
 
-![AjoLedger Login Page](docs/screenshots/login.jpg)
+| Payment Callback | Reliability / Trust Profile |
+|---|---|
+| ![Payment Callback](docs/screenshots/payment-callback.jpg) | ![Reliability Profile](docs/screenshots/trust-profile.jpg) |
 
-### Registration Page
+| Public Trust Profile | Ledger |
+|---|---|
+| ![Public Trust profile](docs/screenshots/public-trust-profile.jpg) | ![Ledger](docs/screenshots/ledger.jpg) |
 
-![AjoLedger Registration Page](docs/screenshots/register.jpg)
-
-### Dashboard
-
-![AjoLedger Dashboard](docs/screenshots/dashboard.jpg)
-
-### Create Circle
-
-![Create Circle](docs/screenshots/create-circle.jpg)
-
-### Circle Detail
-
-![Circle Detail](docs/screenshots/circle-detail.jpg)
-
-### Payment Callback
-
-![Payment Callback](docs/screenshots/payment-callback.jpg)
-
-### Reliability / Trust Profile
-
-![Reliability Profile](docs/screenshots/trust-profile.jpg)
-
-### Public Trust Profile
-
-![Public Trust Profile](docs/screenshots/public-trust-profile.jpg)
-
-### Ledger
-
-![Public Trust Profile](docs/screenshots/ledger.jpg)
-
-### Profile Page
-
-![AjoLedger Profile Page](docs/screenshots/profile.jpg)
+| Profile Page |
+|---|
+| ![AjoLedger Profile Page](docs/screenshots/profile.jpg) |
 
 ---
 
