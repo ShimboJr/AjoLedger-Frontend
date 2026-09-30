@@ -34,12 +34,12 @@ export function CircleDetailSkeleton() {
         <Skeleton className="h-7 w-48" />
         <Skeleton className="h-6 w-20 rounded-full" />
       </div>
-      <div className="card space-y-3">
+      <div className="card space-y-2">
         <Skeleton className="h-5 w-36" />
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-4/5" />
       </div>
-      <div className="card space-y-3">
+      <div className="card space-y-2">
         <Skeleton className="h-5 w-32" />
         {[1, 2, 3].map((i) => (
           <div key={i} className="flex items-center gap-3">

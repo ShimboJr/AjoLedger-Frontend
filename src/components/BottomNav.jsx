@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+// Bottom Nav 
 
 const NAV_ITEMS = [
   {
